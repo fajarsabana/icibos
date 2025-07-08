@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+  const supabase = createClient(
+    "https://jqueqchgsazhompvfifr.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxdWVxY2hnc2F6aG9tcHZmaWZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5NzM5MDIsImV4cCI6MjA1NjU0OTkwMn0.8q1m-jIL4kRgck4pwDfOYFHgFMSg2BIfBSTgIWBc_PE"
+  );
+
+  // ✅ This is the key
+  window.supabase = supabase;
+
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    window.location.href = "login.html";
+  }
+</script>
+
+
+<script>
+  async function logout() {
+    await window.supabase.auth.signOut();
+    window.location.href = "login.html";
+  }
+</script>
+
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLN - DIV APR</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="script.js"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <header>
+        <nav class="nav-container">
+          <div class="nav-left">
+            <img src="Logo_PLN.svg" alt="PLN Logo" class="nav-logo" />
+          </div>
+        
+          <div class="nav-center">
+            <ul class="nav-links">
+              <li><a href="#services" class="text-hover">Home</a></li>
+              <li><a href="#portfolio" class="text-hover">Pemetaan Wilayah Usaha</a></li>
+              <li><a href="#testimonials" class="text-hover">About Us</a></li>
+              <li><a href="#contact" class="text-hover">Contact</a></li>
+            </ul>
+          </div>
+        
+               <a href="#" class="logout-btn" onclick="logout()">Logout</a>
+        </nav>
+    </header>
+
+<section id="map-section">
+    <aside id="sidebar">
+        <div class="sidebar">
+            <div id="coordinate-checker">
+                <input type="number" id="latInput" placeholder="Enter Latitude" step="0.00001">
+                <input type="number" id="lngInput" placeholder="Enter Longitude" step="0.00001">
+                <button id="checkCoordinateBtn">Check</button>
+                <p id="coordinateResult"></p>
+            </div>
+            <div id="resize-handle"></div>
+            <input type="text" id="searchInput" placeholder="Search Wilus or Lokasi Kawasan...">
+            <ul class="clickable-list">
+            <ul> <!-- Dynamic categories will be inserted here --> </ul>
+        </div>
+    </aside>
+
+    <!-- Map -->
+    <div id="map"></div>
+</section>
+
+
+
+
+    <section id="hero" class="fade-in">
+        <h2>Tambahkan Wilayah usaha Sendiri</h2>
+        <p>Daftarkan Wilus anda di Kami, kami urus sampai Tuntas</p>
+        <a href="#contact" class="btn bounce">Get Started</a>
+    </section>
+
+    <section id="services" class="fade-in">
+        <h2>Our Services</h2>
+        <div class="service-boxes">
+            <div class="service">🌐 Web Development</div>
+            <div class="service">📱 Mobile Apps</div>
+            <div class="service">💡 UI/UX Design</div>
+        </div>
+    </section>
+
+    <section id="portfolio" class="fade-in">
+        <h2>Portfolio</h2>
+        <div class="portfolio-grid">
+            <img src="images/example.jpg" class="image-hover" alt="Project 1">
+            <img src="images/example.jpg" class="image-hover" alt="Project 2">
+            <img src="images/example.jpg" class="image-hover" alt="Project 3">
+        </div>
+    </section>
+
+    <section id="testimonials" class="fade-in">
+        <h2>What Our Clients Say</h2>
+        <blockquote>"Best service ever! Helped my company grow massively!" – John Doe</blockquote>
+    </section>
+
+    <section id="flip-card-section" class="fade-in">
+        <h2>Exclusive Offer</h2>
+        <div class="flip-card">
+            <div class="flip-card-inner">
+                <div class="flip-card-front">
+                    <h2>Front</h2>
+                </div>
+                <div class="flip-card-back">
+                    <h2>Special Discount Inside!</h2>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="fade-in">
+        <h2>Contact Us</h2>
+        <form>
+            <input type="text" placeholder="Your Name">
+            <input type="email" placeholder="Your Email">
+            <textarea placeholder="Your Message"></textarea>
+            <button type="submit" class="btn">Send Message</button>
+        </form>
+    </section>
+
+    <footer>
+        <p>© 2025 DIV APR. All rights reserved.</p>
+    </footer>
+</body>
+</html>

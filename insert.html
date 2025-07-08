@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PLN - Wilus Baru</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="script.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    .insert-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 40px;
+      padding: 40px 60px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .insert-left,
+    .insert-right {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .insert-left {
+      max-width: 450px;
+    }
+
+    .insert-right {
+      min-width: 400px;
+    }
+
+    .point-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .point-index {
+      width: 24px;
+      text-align: right;
+    }
+
+    .move-up,
+    .move-down {
+      padding: 2px 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .form-col {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+<!-- ... (header dan nav tetap sama) ... -->
+
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+  const supabase = createClient(
+    "https://jqueqchgsazhompvfifr.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxdWVxY2hnc2F6aG9tcHZmaWZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5NzM5MDIsImV4cCI6MjA1NjU0OTkwMn0.8q1m-jIL4kRgck4pwDfOYFHgFMSg2BIfBSTgIWBc_PE"
+  );
+
+  const map = L.map("mapPreview").setView([-2.5, 118], 5);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors"
+  }).addTo(map);
+
+  const container = document.getElementById("points-container");
+  let previewLayer = null;
+
+  function updatePointIndexes() {
+    const rows = [...container.querySelectorAll(".point-row")];
+    rows.forEach((row, index) => {
+      row.querySelector(".point-index").textContent = `${index + 1}.`;
+    });
+  }
+
+  function addPointRow(lat = '', lng = '') {
+    const div = document.createElement("div");
+    div.className = "point-row";
+    div.innerHTML = `
+      <span class="point-index"></span>
+      <input type="number" step="any" placeholder="Latitude" value="${lat}">
+      <input type="number" step="any" placeholder="Longitude" value="${lng}">
+      <button class="move-up">↑</button>
+      <button class="move-down">↓</button>
+    `;
+
+    div.querySelector(".move-up").onclick = () => {
+      const prev = div.previousElementSibling;
+      if (prev) container.insertBefore(div, prev);
+      updatePointIndexes();
+      previewPolygon();
+    };
+
+    div.querySelector(".move-down").onclick = () => {
+      const next = div.nextElementSibling?.nextElementSibling;
+      if (div.nextElementSibling) container.insertBefore(div.nextElementSibling, div);
+      updatePointIndexes();
+      previewPolygon();
+    };
+
+    container.appendChild(div);
+    updatePointIndexes();
+  }
+
+  for (let i = 0; i < 5; i++) addPointRow();
+
+  function getPolygonCoords() {
+    return [...container.querySelectorAll(".point-row")]
+      .map(row => {
+        const inputs = row.querySelectorAll("input");
+        const lat = parseFloat(inputs[0].value);
+        const lng = parseFloat(inputs[1].value);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return [lng, lat];
+        }
+        return null;
+      })
+      .filter(p => p !== null);
+  }
+
+  function previewPolygon() {
+    const coords = getPolygonCoords();
+    if (coords.length < 3) return;
+    coords.push(coords[0]);
+
+    if (previewLayer) map.removeLayer(previewLayer);
+    previewLayer = L.polygon(coords.map(p => [p[1], p[0]]), {
+      color: "blue",
+      fillOpacity: 0.3
+    }).addTo(map);
+
+    map.fitBounds(previewLayer.getBounds());
+  }
+
+  async function submitWilus() {
+    const uid = document.getElementById("uid").value.trim();
+    const pemegang = document.getElementById("pemegang").value.trim();
+    const nama = document.getElementById("nama").value.trim();
+    const provinsi = document.getElementById("provinsi").value.trim();
+
+    if (!uid || !pemegang || !nama || !provinsi) {
+      alert("Semua field wajib diisi.");
+      return;
+    }
+
+    const coords = getPolygonCoords();
+    if (coords.length < 3) {
+      alert("Minimal 3 titik koordinat valid.");
+      return;
+    }
+
+    coords.push(coords[0]);
+    const geom = { type: "Polygon", coordinates: [coords] };
+
+    const { error } = await supabase.from("wilus_mapping_staging").insert({
+      UID: uid,
+      "Pemegang Wilus": pemegang,
+      "Nama Lokasi": nama,
+      Provinsi: provinsi,
+      geom
+    });
+
+    if (error) {
+      alert("Insert failed: " + error.message);
+    } else {
+      alert("Berhasil ditambahkan ke staging.");
+      location.reload();
+    }
+  }
+
+  window.addPointRow = () => addPointRow();
+  window.previewPolygon = previewPolygon;
+  window.submitWilus = submitWilus;
+</script>
+</body>
+</html>

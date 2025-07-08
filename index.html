@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+  const supabase = createClient(
+    "https://jqueqchgsazhompvfifr.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxdWVxY2hnc2F6aG9tcHZmaWZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5NzM5MDIsImV4cCI6MjA1NjU0OTkwMn0.8q1m-jIL4kRgck4pwDfOYFHgFMSg2BIfBSTgIWBc_PE"
+  );
+
+  // ✅ This is the key
+  window.supabase = supabase;
+
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    window.location.href = "login.html";
+  }
+</script>
+
+
+<script>
+  async function logout() {
+    await window.supabase.auth.signOut();
+    window.location.href = "login.html";
+  }
+</script>
+
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLN - DIV APR</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="script.js"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet MarkerCluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+    
+</head>
+<body>
+    <header>
+
+        <nav class="nav-container">
+  <div class="nav-left">
+    <img src="Logo_PLN.svg" alt="PLN Logo" class="nav-logo" />
+  </div>
+
+  <div class="nav-center">
+    <ul class="nav-links">
+      <li><a href="index.html" class="text-hover">Home</a></li>
+      <li><a href="index.html" class="text-hover">Pemetaan Wilayah Usaha</a></li>
+        <li><a href="insert.html" class="text-hover">Wilus Baru</a></li>
+
+    </ul>
+  </div>
+
+  <div class="nav-right">
+    <a href="#" class="logout-btn" onclick="logout()">Logout</a>
+  </div>
+</nav>
+
+               
+    </header>
+
+<section id="map-section">
+    <aside id="sidebar">
+        <div class="sidebar">
+            <div id="coordinate-checker">
+                <input type="number" id="latInput" placeholder="Enter Latitude" step="0.00001">
+                <input type="number" id="lngInput" placeholder="Enter Longitude" step="0.00001">
+                <button id="checkCoordinateBtn">Check</button>
+                <p id="coordinateResult"></p>
+            </div>
+            <div id="resize-handle"></div>
+            <input type="text" id="searchInput" placeholder="Search Wilus or Lokasi Kawasan...">
+            <ul class="clickable-list">
+            <ul> <!-- Dynamic categories will be inserted here --> </ul>
+        </div>
+    </aside>
+    <div id="sidebar-toggle-handle" class="sidebar-handle">◀</div>
+    <!-- Map -->
+    <div id="map"></div>
+<button id="resetMapBtn">Kembali ke Peta Utama</button>
+<div id="wilusInfoBox">Menampilkan <span id="wilusCount">0</span> Wilus</div>
+    <!-- Tambahkan di index.html setelah #map-section -->
+<div id="info-panel" class="info-panel">
+    <div class="info-panel-header">
+        <h3>Detail Lokasi</h3>
+        <button id="toggleInfoPanel" class="collapse-arrow right-arrow">▶</button>
+    </div>
+    <div id="info-content">
+        <!-- Dynamic content will go here -->
+    </div>
+</div>
+
+</section>
+
+
+    <footer>
+        <p>© 2025 DIV APR. All rights reserved.</p>
+    </footer>
+</body>
+</html>

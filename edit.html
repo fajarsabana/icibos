@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Polygon</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    #map { height: 90vh; width: 100%; }
+    .label-input {
+      background: white;
+      border: 1px solid #ccc;
+      padding: 2px;
+      border-radius: 4px;
+      font-size: 12px;
+      width: 40px;
+    }
+    #saveBtn, #locationSelect {
+      position: absolute;
+      top: 10px;
+      z-index: 1000;
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: none;
+      font-size: 14px;
+    }
+    #saveBtn {
+      left: 200px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    #locationSelect {
+      left: 10px;
+    }
+    .leaflet-tooltip.label-input-tooltip {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      pointer-events: auto !important;
+    }
+  </style>
+</head>
+<body>
+  <select id="locationSelect"><option disabled selected>Loading...</option></select>
+  <button id="saveBtn" disabled>Save Order</button>
+  <div id="map"></div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const supabase = createClient(
+      "https://jqueqchgsazhompvfifr.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxdWVxY2hnc2F6aG9tcHZmaWZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5NzM5MDIsImV4cCI6MjA1NjU0OTkwMn0.8q1m-jIL4kRgck4pwDfOYFHgFMSg2BIfBSTgIWBc_PE"
+    );
+
+    const map = L.map("map").setView([-2.5489, 118.0149], 5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    let markers = [], polygonLayer = null, currentLocationName = null;
+
+    async function loadLocationOptions() {
+      const { data, error } = await supabase.rpc("get_wilus_mapping_duplicate");
+      if (error || !data) {
+        alert("Failed to load location options");
+        return;
+      }
+
+      const select = document.getElementById("locationSelect");
+      select.innerHTML = '<option disabled selected>Select a Location</option>';
+      const uniqueLocations = Array.from(new Set(data.map(d => d["Nama Lokasi"])));
+
+      uniqueLocations.forEach(nama => {
+        const opt = document.createElement("option");
+        opt.value = nama;
+        opt.textContent = nama;
+        select.appendChild(opt);
+      });
+    }
+
+    document.getElementById("locationSelect").addEventListener("change", async function () {
+      if (this.value === currentLocationName) return;
+      currentLocationName = this.value;
+      await loadPolygonByLocation(currentLocationName);
+      document.getElementById("saveBtn").disabled = false;
+    });
+
+    async function loadPolygonByLocation(namaLokasi) {
+      console.log("Loading polygon for location:", namaLokasi);
+      const { data, error } = await supabase.rpc("get_wilus_mapping_duplicate");
+      if (error || !data) return alert("Failed to fetch polygon");
+
+      const polygon = data.find(p => p["Nama Lokasi"] === namaLokasi);
+      if (!polygon || !polygon.geom) return alert("Polygon not found");
+
+      if (polygonLayer) map.removeLayer(polygonLayer);
+      markers.forEach(m => {
+        map.removeLayer(m.marker);
+        if (m.tooltip) map.removeLayer(m.tooltip);
+      });
+      markers = [];
+
+      const coordinates = polygon.geom.coordinates[0];
+
+      coordinates.forEach((coord, index) => {
+        const [lng, lat] = coord;
+        const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+
+        const input = document.createElement("input");
+        input.type = "number";
+        input.value = index;
+        input.min = 0;
+        input.max = coordinates.length - 1;
+        input.className = "label-input";
+
+        const container = document.createElement("div");
+        container.appendChild(input);
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.disableScrollPropagation(container);
+
+        const tooltip = L.tooltip({
+          permanent: true,
+          direction: 'top',
+          className: 'label-input-tooltip'
+        })
+        .setContent(container)
+        .setLatLng([lat, lng])
+        .addTo(map);
+
+        markers.push({ marker, input, tooltip });
+      });
+
+      polygonLayer = L.polygon(coordinates.map(c => [c[1], c[0]]), {
+        color: "blue",
+        weight: 2,
+        fillOpacity: 0.2
+      }).addTo(map);
+
+      map.fitBounds(polygonLayer.getBounds());
+    }
+
+    document.getElementById("saveBtn").addEventListener("click", async () => {
+      try {
+        const orderValues = markers.map((m, i) => {
+          const raw = m.input.value;
+          const val = parseInt(raw);
+          console.log(`Input ${i + 1}: value='${raw}' → parsed=${val}`);
+          if (isNaN(val)) throw new Error("All order inputs must be filled with numbers.");
+          return val;
+        });
+
+        const uniqueOrderCount = new Set(orderValues).size;
+        console.log("orderValues:", orderValues, "unique count:", uniqueOrderCount);
+
+        if (uniqueOrderCount !== orderValues.length) {
+          alert("Duplicate order numbers detected. Please ensure all are unique.");
+          return;
+        }
+
+        const ordered = markers
+          .map(m => ({ latlng: m.marker.getLatLng(), order: parseInt(m.input.value) }))
+          .sort((a, b) => a.order - b.order)
+          .map(m => [m.latlng.lng, m.latlng.lat]);
+
+        ordered.push(ordered[0]);
+
+        const newGeom = {
+          type: "Polygon",
+          coordinates: [ordered]
+        };
+
+        const { error } = await supabase
+          .from("wilus_mapping_duplicate")
+          .update({ geom: newGeom })
+          .eq("Nama Lokasi", currentLocationName);
+
+        if (error) {
+          alert("Failed to save: " + error.message);
+        } else {
+          alert("Polygon updated successfully!");
+          location.reload();
+        }
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+
+    loadLocationOptions();
+  </script>
+</body>
+</html>
